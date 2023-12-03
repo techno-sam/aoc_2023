@@ -4,6 +4,7 @@ fn main() {
     println!("AOC 2023 Day 2");
     let contents = fs::read_to_string("src/bin/day2/input.txt").expect("Failed to read input.txt");
     let mut total: u32 = 0;
+    let mut total_power: u32 = 0;
     for line in contents.split("\n") {
         if line.is_empty() {
             continue;
@@ -12,8 +13,10 @@ fn main() {
         if possible_record(&record, 12, 13, 14) {
             total += record.id;
         }
+        total_power += record.power();
     }
     println!("Total sum: {}", total);
+    println!("Total power: {}", total_power);
 }
 
 struct GameRecord {
@@ -21,6 +24,12 @@ struct GameRecord {
     max_red: u32,
     max_green: u32,
     max_blue: u32
+}
+
+impl GameRecord {
+    fn power(&self) -> u32 {
+        return self.max_red * self.max_green * self.max_blue;
+    }
 }
 
 // `Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green`
@@ -77,6 +86,7 @@ fn parsing() {
     assert_eq!(g.max_red, 4);
     assert_eq!(g.max_green, 2);
     assert_eq!(g.max_blue, 6);
+    assert_eq!(g.power(), 48);
 }
 
 #[test]
