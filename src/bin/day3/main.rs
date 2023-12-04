@@ -4,6 +4,7 @@ fn main() {
     println!("AOC 2023 Day 3");
     let schem: &mut Schematic = &mut load_schematic("src/bin/day3/input.txt");
     println!("Part 1 sum: {}", schem.process());
+    println!("Part 2 sum: {}", schem.count_gears());
 }
 
 #[derive(Debug)]
@@ -19,9 +20,29 @@ struct Coord {
 }
 
 #[derive(Debug)]
+struct GearData {
+    num_count: u32,
+    product: u32
+}
+
+impl GearData {
+    fn mesh_with(&mut self, number: u32) {
+        if self.num_count == 0 {
+            self.product = number;
+        } else if self.num_count == 1 {
+            self.product *= number;
+        } else {
+            self.product = 0;
+        }
+        self.num_count += 1;
+    }
+}
+
+#[derive(Debug)]
 enum Parts {
     Blank,
     Symbol(char),
+    Gear(GearData),
     NumberStart(NumberStart),
     NumberContinue(Coord)
 }
@@ -55,6 +76,10 @@ impl Schematic {
                 let digit = chr.to_digit(10);
                 if chr == '.' {
                     row_data.push(Parts::Blank);
+                    building_number = None;
+                } else if chr == '*' {
+                    row_data.push(Parts::Gear(GearData { num_count: 0, product: 0 }));
+                    symbols.push(Coord { row, column });
                     building_number = None;
                 } else if let Some(d) = digit {
                     match building_number {
@@ -100,11 +125,13 @@ impl Schematic {
                         continue;
                     }
                     let mut coord_to_set: Option<Coord> = None;
+                    let mut count_set: Option<u32> = None;
                     match &mut self.data[row as usize][column as usize] {
                         Parts::NumberStart(num_data) => {
                             if !num_data.is_part {
                                 num_data.is_part = true;
                                 count += num_data.value;
+                                count_set = Some(num_data.value);
                             }
                         },
                         Parts::NumberContinue(c) => {
@@ -117,7 +144,13 @@ impl Schematic {
                             if !num_data.is_part {
                                 num_data.is_part = true;
                                 count += num_data.value;
+                                count_set = Some(num_data.value);
                             }
+                        }
+                    }
+                    if let Some(cs) = count_set {
+                        if let Parts::Gear(gear_data) = &mut self.data[coord.row][coord.column] {
+                            gear_data.mesh_with(cs);
                         }
                     }
                 }
@@ -125,6 +158,20 @@ impl Schematic {
         }
         self.result = Some(count);
         return count;
+    }
+
+    fn count_gears(&self) -> u32 {
+        let mut gear_sum: u32 = 0;
+        for row in 0..self.height {
+            for column in 0..self.width {
+                if let Parts::Gear(gear_data) = &self.data[row][column] {
+                    if gear_data.num_count == 2 {
+                        gear_sum += gear_data.product;
+                    }
+                }
+            }
+        }
+        return gear_sum;
     }
 
     #[allow(dead_code)]
@@ -146,4 +193,5 @@ fn process_works() {
     s.process();
     s.debug_print();
     assert_eq!(4361, s.process());
+    assert_eq!(467835, s.count_gears());
 }
