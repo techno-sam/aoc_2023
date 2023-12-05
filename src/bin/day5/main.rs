@@ -10,7 +10,16 @@ fn main() {
         .collect();
     min.sort_by(|(_s1, l1), (_s2, l2)| l1.partial_cmp(l2).unwrap());
     let (_, mininum_loc) = min[0];
-    println!("Minimum location: {}", mininum_loc);
+    println!("Part 1 minimum location: {}", mininum_loc);
+
+    let expanded = almanac.expand_ranges();
+    println!("Expanded seed count: {}", expanded.len());
+    let mut min2: Vec<(u64, u64)> = expanded.iter()
+        .map(|seed| (*seed, almanac.map("seed", "location", *seed)))
+        .collect();
+    min2.sort_by(|(_s1, l1), (_s2, l2)| l1.partial_cmp(l2).unwrap());
+    let (_, mininum_loc2) = min2[0];
+    println!("Part 2 minimum location: {}", mininum_loc2);
 }
 
 struct RangeMapEntry {
@@ -132,6 +141,22 @@ impl Almanac {
             current_src = next;
         }
         return v;
+    }
+
+    fn expand_ranges(&self) -> Vec<u64> {
+        let mut out: Vec<u64> = vec![];
+
+        for i in (0..self.seeds.len()).step_by(2) {
+            let from = self.seeds[i];
+            let range = self.seeds[i+1];
+            for v in from..(from+range) {
+                out.push(v);
+            }
+        }
+
+        println!("\tExpanded range of length: {}", out.len());
+
+        return out;
     }
 }
 
