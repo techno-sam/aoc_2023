@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, VecDeque}, fs, ops::{Range, RangeInclusive}};
+use std::{collections::HashMap, fs};
 
 fn main() {
     println!("AOC 2023 Day 5");
@@ -60,10 +60,12 @@ impl RangeMapEntry {
     }
 }
 
+#[allow(dead_code)]
 struct RangeMap {
     name: String,
     entries: Vec<RangeMapEntry> // MUST be sorted by source_start
 }
+#[allow(dead_code)]
 impl RangeMap {
     fn load(name: &str, entries: &str) -> RangeMap {
         let mut ent: Vec<RangeMapEntry> = entries.split("\n")
@@ -89,7 +91,7 @@ impl RangeMap {
 
     fn map_ranges(&self, range: SeedRange) -> Vec<SeedRange> {
         let mut out: Vec<SeedRange> = vec![];
-        let orig_range = SeedRange::n(range.start, range.end, range.done_processing);
+        // let orig_range = SeedRange::n(range.start, range.end, range.done_processing);
         let mut todo: Vec<SeedRange> = vec![range];
 
         for entry in &self.entries {
@@ -149,6 +151,7 @@ impl RangeMap {
     }
 }
 
+#[allow(dead_code)]
 fn get_test_output() -> String {
     return "seeds: 79 14 55 13
 
