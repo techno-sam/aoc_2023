@@ -22,6 +22,11 @@ fn main() {
         .map(|race| possibilities(race.time, race.distance))
         .product();
     println!("Part 1 variance product: {}", variance_product);
+
+    let kerned_time: u64 = times.replace("Time:", "").replace(" ", "").parse::<u64>().unwrap();
+    let kerned_distance: u64 = distances.replace("Distance:", "").replace(" ", "").parse::<u64>().unwrap();
+    let variance_2: u64 = possibilities(kerned_time, kerned_distance);
+    println!("Part 2 kerned variance: {}", variance_2);
 }
 
 fn test_main() {
