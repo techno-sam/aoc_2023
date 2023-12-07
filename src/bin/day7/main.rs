@@ -25,7 +25,6 @@ enum Card {
     A, // val 13
     K,
     Q,
-    J,
     T,
     _9,
     _8,
@@ -34,7 +33,8 @@ enum Card {
     _5,
     _4,
     _3,
-    _2, // val 0
+    _2,
+    J,  // val 0
 }
 impl Card {
     fn index(&self) -> usize {
@@ -88,25 +88,38 @@ impl Hands {
     }
 
     fn from(hand: Hand) -> Hands {
+        let mut joker_count: u64 = 0;
         let mut counts: HashMap<Card, u64> = HashMap::new();
         for card in hand {
-            counts.insert(card, counts.get(&card).or(Some(&0u64)).unwrap() + 1);
+            if card == Card::J {
+                joker_count += 1;
+            } else {
+                counts.insert(card, counts.get(&card).or(Some(&0u64)).unwrap() + 1);
+            }
         }
         let mut vals: Vec<u64> = counts.values().map(|v| *v).collect();
         vals.sort_unstable_by(|a, b| b.partial_cmp(a).unwrap()); // reverse sort
-        if vals[0] == 5 {
+        while vals.len() < 2 {
+            vals.push(0);
+        }
+        if vals[0]+joker_count >= 5 { // WARN: modified
             return Hands::FiveKind;
-        } else if vals[0] == 4 {
+        } else if vals[0]+joker_count >= 4 { // WARN: modified
             return Hands::FourKind;
-        } else if vals[0] == 3 && vals[1] == 2 {
+        } else if vals[0] == 3 && vals[1] == 2 { // NOTE: original
             return Hands::FullHouse;
-        } else if vals[0] == 3 {
+        } else if (3-vals[0]) + (2-vals[1]) <= joker_count { // vals[0]+part of joker >= 3 && vals[1] + part of joker >= 2
+                                                             // jokers needed = (3-vals[0]) + (2-vals[1])
+            return Hands::FullHouse;
+        } else if vals[0]+joker_count >= 3 { // WARN: modified
             return Hands::ThreeKind;
-        } else if vals[0] == 2 && vals[1] == 2 {
+        } else if vals[0] == 2 && vals[1] == 2 { // NOTE: original
             return Hands::TwoPair;
-        } else if vals[0] == 2 {
+        } else if (2-vals[0]) + (2-vals[1]) <= joker_count { // jokers_needed = (2-vals[0]) + (2-vals[1])
+            return Hands::TwoPair;
+        } else if vals[0]+joker_count >= 2 { // WARN: modified
             return Hands::OnePair;
-        } else {
+        } else { // NOTE: original
             return Hands::HighCard;
         }
     }
@@ -145,4 +158,11 @@ fn hand_parsing() {
 #[test]
 fn hand_cmp() {
     assert_eq!(Ordering::Greater, compare_hands(Hands::parse_hand("33332"), Hands::parse_hand("2AAAA")));
+}
+
+#[test]
+fn joker_parsing() {
+    assert_eq!(Hands::FourKind, Hands::from_str("T55J5"));
+    assert_eq!(Hands::FourKind, Hands::from_str("KTJJT"));
+    assert_eq!(Hands::FourKind, Hands::from_str("QQQJA"));
 }
