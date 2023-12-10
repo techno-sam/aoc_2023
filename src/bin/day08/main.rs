@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs};
 fn main() {
     println!("AOC 2023 Day 8");
 
-    let contents = fs::read_to_string("src/bin/day8/input.txt").expect("Failed to load input");
+    let contents = fs::read_to_string("src/bin/day08/input.txt").expect("Failed to load input");
     let (pattern, network_data) = contents.split_once("\n\n").unwrap();
     let network = Network::load(network_data);
     let steps = network.traverse(pattern);
@@ -148,14 +148,14 @@ fn lcm(a: u64, b: u64) -> u64 {
 
 #[allow(dead_code)]
 fn get_test_network() -> (String, Network) {
-    let contents = fs::read_to_string("src/bin/day8/test.txt").expect("Failed to load test.txt");
+    let contents = fs::read_to_string("src/bin/day08/test.txt").expect("Failed to load test.txt");
     let (pattern, network_data) = contents.split_once("\n\n").unwrap();
     return (pattern.to_owned(), Network::load(network_data));
 }
 
 #[allow(dead_code)]
 fn get_test_network_2() -> (String, Network) {
-    let contents = fs::read_to_string("src/bin/day8/test2.txt").expect("Failed to load test.txt");
+    let contents = fs::read_to_string("src/bin/day08/test2.txt").expect("Failed to load test.txt");
     let (pattern, network_data) = contents.split_once("\n\n").unwrap();
     return (pattern.to_owned(), Network::load(network_data));
 }

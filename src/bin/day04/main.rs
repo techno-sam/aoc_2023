@@ -3,7 +3,7 @@ use std::fs;
 fn main() {
     println!("AOC 2023 Day 4");
 
-    let contents = fs::read_to_string("src/bin/day4/input.txt").expect("Failed to read file");
+    let contents = fs::read_to_string("src/bin/day04/input.txt").expect("Failed to read file");
     let mut pile: CardPile = CardPile::load(&contents);
     let total: u32 = pile.calculate_total_points();
     println!("Part 1: {}", total);

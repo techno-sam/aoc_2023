@@ -2,7 +2,7 @@ use std::fs;
 
 fn main() {
     println!("AOC 2023 Day 3");
-    let schem: &mut Schematic = &mut load_schematic("src/bin/day3/input.txt");
+    let schem: &mut Schematic = &mut load_schematic("src/bin/day03/input.txt");
     println!("Part 1 sum: {}", schem.process());
     println!("Part 2 sum: {}", schem.count_gears());
 }
@@ -189,7 +189,7 @@ impl Schematic {
 
 #[test]
 fn process_works() {
-    let s: &mut Schematic = &mut load_schematic("src/bin/day3/test.txt");
+    let s: &mut Schematic = &mut load_schematic("src/bin/day03/test.txt");
     s.process();
     s.debug_print();
     assert_eq!(4361, s.process());

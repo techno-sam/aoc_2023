@@ -2,7 +2,7 @@ use std::{cmp::Ordering, collections::HashMap, fs};
 
 fn main() {
     println!("AOC 2023 Day 7");
-    let content = fs::read_to_string("src/bin/day7/input.txt").expect("Could not find input");
+    let content = fs::read_to_string("src/bin/day07/input.txt").expect("Could not find input");
     let lines = content.trim().split("\n");
     let mut hands: Vec<(Hand, u64)> = lines.map(|l| l.trim().split_once(" ").map(|(a, b)| (a.trim(), b.trim())))
         .map(|o| o.unwrap())

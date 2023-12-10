@@ -4,7 +4,7 @@ fn main() {
     println!("AOC 2023 Day 6");
     test_main();
 
-    let contents = fs::read_to_string("src/bin/day6/input.txt").expect("Failed to read input");
+    let contents = fs::read_to_string("src/bin/day06/input.txt").expect("Failed to read input");
     let (times, distances) = contents.trim().split_once("\n").unwrap();
 
     let times_iter = times.split(" ")

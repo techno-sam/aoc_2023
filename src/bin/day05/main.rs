@@ -2,7 +2,7 @@ use std::{collections::HashMap, fs};
 
 fn main() {
     println!("AOC 2023 Day 5");
-    let contents = fs::read_to_string("src/bin/day5/input.txt").expect("Failed to read input");
+    let contents = fs::read_to_string("src/bin/day05/input.txt").expect("Failed to read input");
     let almanac: Almanac = Almanac::load(&contents);
 
     let mut min: Vec<(u64, u64)> = almanac.seeds.iter()

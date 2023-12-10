@@ -3,7 +3,7 @@ use std::fs;
 fn main() {
     println!("AOC 2023 Day 9");
 
-    let contents = fs::read_to_string("src/bin/day9/input.txt").expect("Failed to load input");
+    let contents = fs::read_to_string("src/bin/day09/input.txt").expect("Failed to load input");
     let prediction_sum = predict_sum(&contents, trickle_predict);
     println!("Sum of predictions: {}", prediction_sum);
 

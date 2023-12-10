@@ -2,7 +2,7 @@ use std::fs;
 
 fn main() {
     println!("AOC 2023 Day 1");
-    let contents = fs::read_to_string("src/bin/day1/input.txt").expect("Failed to read input.txt");
+    let contents = fs::read_to_string("src/bin/day01/input.txt").expect("Failed to read input.txt");
     let mut total1 = 0;
     let mut total2 = 0;
     for line in contents.split("\n") {
