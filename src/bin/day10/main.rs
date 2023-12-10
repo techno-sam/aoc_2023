@@ -3,8 +3,8 @@ use std::{fs, collections::hash_map::DefaultHasher, hash::{Hash, Hasher}, time::
 fn main() {
     println!("AOC 2023 Day 10");
 
-    let test = true;
-    let mut map: Map = if test {parse_example(2, true)} else {parse_input()};
+    let test = false;
+    let mut map: Map = if test {parse_example(4, true)} else {parse_input()};
 
     println!("Map is {}x{}", map.width, map.height);
 
@@ -20,7 +20,11 @@ fn main() {
         map.print_dist();
     }
 
-    println!("\nmax dist: {}", max_dist);
+    println!("\nmax dist: {}\n", max_dist);
+
+    let inner_count = map.calculate_in_loop();
+    map.print_in_loop(false);
+    println!("inner count: {}", inner_count);
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -115,6 +119,15 @@ struct Entry {
     pipe: Pipe,
     id: Option<u64>,
     distance: u64,
+    in_loop: bool
+}
+impl Entry {
+    fn is_main(&self, main_loop: u64) -> bool {
+        if let Some(id) = self.id {
+            return id == main_loop;
+        }
+        return false;
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -146,7 +159,7 @@ impl Map {
         let pipes = lines.iter()
             .map(|line| (".".to_owned()+line+".").chars()
                 .map(|c| Pipe::parse(c).expect("Failed to parse pipe"))
-                .map(|p| Entry { pipe: p, id: None, distance: 0xffff_ffff_ffff_ffff })
+                .map(|p| Entry { pipe: p, id: None, distance: 0xffff_ffff_ffff_ffff, in_loop: false })
                 .collect::<Vec<_>>()
             )
             .collect::<Vec<Vec<Entry>>>();
@@ -169,7 +182,10 @@ impl Map {
         for row in 0..self.height {
             for column in 0..self.width {
                 let entry = &self.pipes[row][column];
-                print!("{}", highlight(&colorize_id(&entry.pipe.to_pretty(), entry.id.unwrap_or(0)), entry.pipe == Pipe::Start));
+                print!("{}", highlight(
+                        &colorize_id(&entry.pipe.to_pretty(), entry.id.unwrap_or(0)),
+                        entry.pipe == Pipe::Start, 255, 255, 255
+                        ));
             }
             println!("");
         }
@@ -180,6 +196,22 @@ impl Map {
             for column in 0..self.width {
                 let entry = &self.pipes[row][column];
                 print!("{} ", colorize_id(&entry.distance.to_string(), entry.id.unwrap_or(0)));
+            }
+            println!("");
+        }
+    }
+
+    fn print_in_loop(&self, do_space: bool) {
+        let main_id = self.get(self.starting_pos).id.expect("No starting id");
+        for row in 0..self.height {
+            for column in 0..self.width {
+                let entry = &self.pipes[row][column];
+                if entry.is_main(main_id) {
+                    print!("{}{}", colorize(&entry.pipe.to_pretty(), 255, 255, 0), if do_space {" "} else {""});
+                } else {
+                    let (r, g, b) = if entry.in_loop {(0_u8, 255_u8, 0_u8)} else {(255, 0, 0)};
+                    print!("{}{}", highlight(&entry.pipe.to_pretty(), true, r, g, b), if do_space {" "} else {""});
+                }
             }
             println!("");
         }
@@ -260,7 +292,6 @@ impl Map {
         }
         let mut max = 0;
         let mut frontier: Vec<Coord> = vec![self.starting_pos];
-        let mut visited: Vec<Coord> = vec![self.starting_pos];
         self.get_mut(self.starting_pos).distance = 0;
         let main_id = self.get(self.starting_pos).id.expect("No starting id");
         while !frontier.is_empty() {
@@ -273,11 +304,10 @@ impl Map {
                     .for_each(|(_, coord)| frontier.insert(0, coord));
                 continue;
             }
-            if visited.contains(&c) {
+            let entry = self.get(c);
+            if entry.distance < 0xffff_ffff_ffff_ffff {
                 continue;
             }
-            visited.push(c);
-            let entry = self.get(c);
 
             let connected: Vec<Side> = Side::values().iter()
                 .filter(|s| entry.pipe.is_side_open(s))
@@ -301,6 +331,28 @@ impl Map {
             }
         }
         return max;
+    }
+
+    fn calculate_in_loop(&mut self) -> u64 {
+        let mut count = 0;
+        let main_id = self.get(self.starting_pos).id.expect("No starting id");
+        for row in 0..self.height {
+            let mut inside: bool = false;
+            for column in 0..self.width {
+                self.pipes[row][column].in_loop = inside;
+                if inside && !self.pipes[row][column].is_main(main_id) {
+                    count += 1;
+                }
+                if column == self.width - 1 {
+                    continue;
+                }
+                let p = &self.pipes[row][column];
+                if p.is_main(main_id) && p.pipe.is_side_open(&Side::North) { // there's a bar sticking up
+                    inside = !inside;
+                }
+            }
+        }
+        return count;
     }
 }
 
@@ -355,9 +407,9 @@ fn colorize(input: &str, r: u8, g: u8, b: u8) -> String {
     return "\x1b[38;2;".to_owned()+&r.to_string()+";"+&g.to_string()+";"+&b.to_string()+"m"+input+"\x1b[0m";
 }
 
-fn highlight(input: &str, actually: bool) -> String {
+fn highlight(input: &str, actually: bool, r: u8, g: u8, b: u8) -> String {
     if !actually {
         return input.to_owned();
     }
-    return "\x1b[42m".to_owned()+input+"\x1b[0m";
+    return "\x1b[48;2;".to_owned()+&r.to_string()+";"+&g.to_string()+";"+&b.to_string()+"m"+input+"\x1b[0m";
 }
