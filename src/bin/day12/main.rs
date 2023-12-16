@@ -16,15 +16,6 @@ fn main() {
     println!("Total expanded arrangement count: {}", sum2);
 }
 
-/*fn debugging() {
-    let r = Record::parse("?###???????? 3,2,1");
-    let descriptions = r.variant_records().filter(|r| r.is_valid());
-    println!("{}", r);
-    for d in descriptions {
-        println!("{}", d);
-    }
-}*/
-
 #[derive(PartialEq, Clone, Copy)]
 enum Symbol {
     Operational,
@@ -79,10 +70,6 @@ impl Record {
         }
         return Record { conditions: new_conditions, contiguous_damage: new_cont_damage };
     }
-
-    /*fn arrangements(&self) -> usize {
-        return self.variant_records().filter(|r| r.is_valid()).count();
-    }*/
 
     #[inline]
     fn copy_conditions(&self) -> Vec<Symbol> {
@@ -221,69 +208,6 @@ impl Record {
             },
         };
     }
-
-    /*fn variants(&self) -> Box<dyn Iterator<Item = Vec<Symbol>> + '_> {
-        let unknown_count = self.conditions.iter().filter(|s| **s == Symbol::Unknown).count();
-        if unknown_count == 0 {
-            return Box::new(vec![self.copy_conditions()].into_iter());
-        }
-        let a = ( 0_usize..(1<<unknown_count) ).map(|v| {
-            let mut new_conditions: Vec<Symbol> = vec![];
-            new_conditions.reserve_exact(self.conditions.len());
-            let mut counter: usize = 0;
-            for s in &self.conditions {
-                if *s == Symbol::Unknown {
-                    let mask: usize = 1<<counter;
-                    counter += 1;
-                    if v & mask != 0 {
-                        new_conditions.push(Symbol::Operational);
-                    } else {
-                        new_conditions.push(Symbol::Damaged);
-                    }
-                } else {
-                    new_conditions.push(*s);
-                }
-            }
-            return new_conditions;
-        });
-        return Box::new(a);
-    }
-
-    fn is_valid(&self) -> bool {
-        let mut cont: u64 = 0;
-        let mut idx: usize = 0;
-
-        let mut c: Vec<Symbol> = vec![];
-        c.extend(self.copy_conditions());
-        c.push(Symbol::Operational);
-
-        for s in c {
-            match s {
-                Symbol::Operational => {
-                    if cont != 0 {
-                        if idx >= self.contiguous_damage.len() {
-                            return false;
-                        }
-                        if cont != self.contiguous_damage[idx] {
-                            return false;
-                        }
-                        idx += 1;
-                        cont = 0;
-                    }
-                },
-                Symbol::Damaged => {
-                    cont += 1;
-                },
-                Symbol::Unknown => panic!("Can't check validity of unknown parts")
-            };
-        }
-
-        return idx == self.contiguous_damage.len();
-    }
-
-    fn variant_records(&self) -> Box<dyn Iterator<Item = Record> + '_> {
-        return Box::new(self.variants().map(|v| Record { conditions: v, contiguous_damage: self.copy_damage() }));
-    }*/
 
     fn variant_to_string(data: &Vec<Symbol>) -> String {
         return String::from_iter(data.iter().map(|s| s.encode()));
