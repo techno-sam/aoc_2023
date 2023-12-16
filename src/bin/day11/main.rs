@@ -8,8 +8,10 @@ fn main() {
 
     map.expand_all();
 
-    let dist = map.sum_distances();
+    let dist = map.sum_distances(1);
     println!("Distance sum: {}", dist);
+    let dist2 = map.sum_distances(1_000_000-1);
+    println!("Long-distance sum: {}", dist2);
 }
 
 #[allow(dead_code)]
@@ -44,12 +46,29 @@ impl Coord {
         return self.y;
     }
 
-    fn dist(&self, other: &Coord) -> u64 {
-        let x1 = self.x as i64;
-        let x2 = other.x as i64;
-        let y1 = self.y as i64;
-        let y2 = other.y as i64;
-        return ((x1-x2).abs() + (y1-y2).abs()) as u64;
+    fn dist(&self, other: &Coord, expanded_rows: &Vec<usize>, expanded_columns: &Vec<usize>, expansion: u64) -> u64 {
+        let x1 = self.x.min(other.x);
+        let x2 = self.x.max(other.x);
+
+        let y1 = self.y.min(other.y);
+        let y2 = self.y.max(other.y);
+
+        let mut dist = (x2-x1) + (y2-y1);
+
+        for row in expanded_rows {
+            let r = *row as u64;
+            if r > y1 && r < y2 {
+                dist += expansion;
+            }
+        }
+        for column in expanded_columns {
+            let c = *column as u64;
+            if c > x1 && c < x2 {
+                dist += expansion;
+            }
+        }
+
+        return dist;
     }
 }
 
@@ -77,7 +96,9 @@ impl StarType {
 struct StarMap {
     field: Vec<Vec<StarType>>,
     width: usize,
-    height: usize
+    height: usize,
+    expanded_rows: Vec<usize>,
+    expanded_columns: Vec<usize>
 }
 impl StarMap {
     fn galaxy_coords(&self) -> Vec<Coord> {
@@ -92,7 +113,7 @@ impl StarMap {
         return coords;
     }
 
-    fn sum_distances(&self) -> u64 {
+    fn sum_distances(&self, expansion: u64) -> u64 {
         let mut sum = 0;
         let coords = self.galaxy_coords();
 
@@ -100,7 +121,7 @@ impl StarMap {
             let c1 = &coords[i];
             for j in i+1..coords.len() {
                 let c2 = &coords[j];
-                sum += c1.dist(c2);
+                sum += c1.dist(c2, &self.expanded_rows, &self.expanded_columns, expansion);
             }
         }
 
@@ -122,7 +143,7 @@ impl StarMap {
 
         let width = field[0].len();
         let height = field.len();
-        return StarMap { field, width, height };
+        return StarMap { field, width, height, expanded_rows: vec![], expanded_columns: vec![] };
     }
 
     fn expand_all(&mut self) {
@@ -147,16 +168,17 @@ impl StarMap {
             }
         }
 
-        let mut offset: usize = 0;
+        //let mut offset: usize = 0;
         let to_expand: Vec<usize> = empty.iter().enumerate().filter(|(_, &e)| e).map(|(i, _)| i).collect();
+        self.expanded_columns = to_expand;
 
-        for expand_column in to_expand {
+        /*for expand_column in to_expand {
             offset += 1;
             for line in &mut self.field {
                 line.insert(expand_column + offset, StarType::EmptySpace);
             }
         }
-        self.width += offset;
+        self.width += offset;*/
     }
 
     fn expand_empty_rows(&mut self) {
@@ -175,7 +197,8 @@ impl StarMap {
             }
         }
 
-        let mut offset: usize = 0;
+        self.expanded_rows = to_expand;
+        /*let mut offset: usize = 0;
         for expand_row in to_expand {
             offset += 1;
             let mut new_row: Vec<StarType> = vec![];
@@ -184,7 +207,7 @@ impl StarMap {
             }
             self.field.insert(expand_row+offset, new_row);
         }
-        self.height += offset;
+        self.height += offset;*/
     }
 
     #[allow(dead_code)]
@@ -215,5 +238,7 @@ fn counting() {
     map.expand_empty_columns();
     map.expand_empty_rows();
 
-    assert_eq!(374, map.sum_distances());
+    assert_eq!(374, map.sum_distances(1));
+    assert_eq!(1030, map.sum_distances(9));
+    assert_eq!(8410, map.sum_distances(99));
 }
