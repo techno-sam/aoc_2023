@@ -1,4 +1,4 @@
-use std::{fs, fmt::{Display, Error, Formatter}};
+use std::{fs, fmt::{Display, Error, Formatter}, hash::{Hash, Hasher}, io::{Write, stdout}};
 
 use memoize::memoize;
 
@@ -12,7 +12,18 @@ fn main() {
     let sum: u64 = records.iter().map(|r| r.arrangements()).sum();
     println!("Total arrangement count: {}", sum);
 
-    let sum2: u64 = records.iter().map(|r| r.expand().arrangements()).sum();
+    let mut sum2: u64 = 0;
+    for (i, record) in records.iter().enumerate() {
+        if i % 5 == 0 {
+            let progress: f64 = (i as f64) / (records.len() as f64);
+            print!("\x1b[2K\r");
+            print!("  Progress: {}%", (progress*100_00.0).round()/100.0);
+            stdout().flush().unwrap();
+        }
+        sum2 += record.expand().arrangements();
+    }
+    println!("\n");
+    //let sum2: u64 = records.iter().map(|r| r.expand().arrangements()).sum();
     println!("Total expanded arrangement count: {}", sum2);
 }
 
@@ -46,6 +57,7 @@ fn colorize(input: &str, r: u8, g: u8, b: u8) -> String {
     return "\x1b[38;2;".to_owned()+&r.to_string()+";"+&g.to_string()+";"+&b.to_string()+"m"+input+"\x1b[0m";
 }
 
+#[derive(PartialEq)]
 struct Record {
     conditions: Vec<Symbol>,
     contiguous_damage: Vec<u64>
@@ -91,122 +103,14 @@ impl Record {
         return new;
     }
 
-    #[inline]
-    fn clone(&self) -> Record {
-        return Record { conditions: self.copy_conditions(), contiguous_damage: self.copy_damage() };
-    }
-
     fn arrangements(&self) -> u64 {
         #[cfg(test)]
         println!("\n\n\n\n");
         return self.clone().mut_ok_subvariants(0);
     }
 
-    fn mut_ok_subvariants(&mut self, depth: usize) -> u64 {
-        #[cfg(test)]
-        let colors = [
-            (255, 0, 0),
-            (255, 127, 0),
-            (255, 255, 0),
-            (0, 255, 0),
-            (0, 0, 255),
-            (75, 0, 130),
-            (148, 0, 211)
-        ];
-        #[cfg(test)]
-        let mut indentation = "".to_owned();
-        #[cfg(test)]
-        for d in 0..depth {
-            let (r, g, b) = colors[d%colors.len()];
-            indentation += &colorize(" |", r, g, b);
-        }
-        #[cfg(test)]
-        println!("{}Checking {}", indentation, self);
-        while self.conditions.len() > 0 && self.conditions[0] == Symbol::Operational { // strip leading ....
-            self.conditions.remove(0);
-        }
-        if self.conditions.len() == 0 {
-            if self.contiguous_damage.len() == 0 {
-                #[cfg(test)]
-                println!("{}> {}", indentation, colorize("ran out simultaneously", 0, 255, 0));
-                return 1;
-            } else {
-                #[cfg(test)]
-                println!("{}> ran out of damaged area", indentation);
-                return 0;
-            }
-        }
-        if self.contiguous_damage.len() == 0 {
-            for s in &self.conditions {
-                if *s == Symbol::Damaged {
-                    return 0;
-                }
-            }
-            #[cfg(test)]
-            println!("{}> {}", indentation, colorize("ran out with '.' padding", 0, 255, 0));
-            return 1;
-        }
-        match self.conditions.remove(0) {
-            Symbol::Operational => panic!("Operational should be stripped"),
-            Symbol::Damaged => {
-                let damage_len = self.contiguous_damage[0] as usize;
-                if self.conditions.len() < damage_len-1 {
-                    #[cfg(test)]
-                    println!("{}> not enough conditions", indentation);
-                    return 0;
-                }
-                // in this case conditions[0..damage_len-1] have to all be
-                // '#' or '?' (coerced to '#'); AKA none of them can be Operational
-                // the -1 is because we pre-remove the leading '#'
-                for idx in 0..damage_len-1 {
-                    if self.conditions[idx] == Symbol::Operational {
-                        #[cfg(test)]
-                        println!("{}> found operational at idx {} in damaged area of length {}, self: {}", indentation, idx, damage_len, self);
-                        return 0;
-                    }
-                }
-                // then, conditions[damage_len] has to either a) not exist or b) equal '.' or '?'
-                // and then check children
-                if self.conditions.len() == damage_len-1 {
-                    if self.contiguous_damage.len() == 1 {
-                        #[cfg(test)]
-                        println!("{}> {}", indentation, colorize("perfect end length", 0, 255, 0));
-                        return 1;
-                    } else {
-                        #[cfg(test)]
-                        println!("{}> not enough space for conditions", indentation);
-                        return 0;
-                    }
-                }
-                if self.conditions[damage_len-1] == Symbol::Damaged {
-                    #[cfg(test)]
-                    println!("{}> damaged at end of desired damage length", indentation);
-                    return 0;
-                }
-                let mut child = Record {
-                    conditions: self.conditions[damage_len..self.conditions.len()].to_vec(),
-                    contiguous_damage: self.contiguous_damage[1..self.contiguous_damage.len()].to_vec()
-                };
-                return child.mut_ok_subvariants(depth+1);
-            },
-            Symbol::Unknown => {
-                let mut rc0: Vec<Symbol> = vec![]; // operational variant, pre-strip
-                let mut rc1: Vec<Symbol> = vec![Symbol::Damaged];
-
-                rc0.extend(self.copy_conditions());
-                rc1.extend(self.copy_conditions());
-
-                #[cfg(test)]
-                println!("{} {}", indentation, colorize(&format!("[ '.{}' ]", Record::variant_to_string(&rc0)), 255, 0, 255));
-                let mut r0 = Record { conditions: rc0, contiguous_damage: self.copy_damage() };
-                let c0 = r0.mut_ok_subvariants(depth+1);
-                #[cfg(test)]
-                println!("{} {}", indentation, colorize(&format!("[ '{}' ]", Record::variant_to_string(&rc1)), 255, 0, 255));
-                let mut r1 = Record { conditions: rc1, contiguous_damage: self.copy_damage() };
-                let c1 = r1.mut_ok_subvariants(depth+1);
-                return c0 + c1;
-            },
-        };
+    fn mut_ok_subvariants(&mut self, depth: usize) -> u64 { 
+        return mut_ok_subvariants(self.clone(), depth);
     }
 
     fn variant_to_string(data: &Vec<Symbol>) -> String {
@@ -221,6 +125,126 @@ impl Display for Record {
             Err(_) => Err(Error)
         }
     }
+}
+impl Clone for Record {
+    fn clone(&self) -> Self {
+        return Record { conditions: self.copy_conditions(), contiguous_damage: self.copy_damage() };
+    }
+}
+impl Hash for Record {
+    fn hash<H>(&self, state: &mut H) where H: Hasher {
+        format!("{}", self).hash(state);
+    }
+}
+impl Eq for Record {}
+
+#[memoize]
+// record DOES need to be mutable, memoization borks stuff
+fn mut_ok_subvariants(mut record: Record, depth: usize) -> u64 {
+    #[cfg(test)]
+    let colors = [
+        (255, 0, 0),
+        (255, 127, 0),
+        (255, 255, 0),
+        (0, 255, 0),
+        (0, 0, 255),
+        (75, 0, 130),
+        (148, 0, 211)
+    ];
+    #[cfg(test)]
+    let mut indentation = "".to_owned();
+    #[cfg(test)]
+    for d in 0..depth {
+        let (r, g, b) = colors[d%colors.len()];
+        indentation += &colorize(" |", r, g, b);
+    }
+    #[cfg(test)]
+    println!("{}Checking {}", indentation, record);
+    while record.conditions.len() > 0 && record.conditions[0] == Symbol::Operational { // strip leading ....
+        record.conditions.remove(0);
+    }
+    if record.conditions.len() == 0 {
+        if record.contiguous_damage.len() == 0 {
+            #[cfg(test)]
+            println!("{}> {}", indentation, colorize("ran out simultaneously", 0, 255, 0));
+            return 1;
+        } else {
+            #[cfg(test)]
+            println!("{}> ran out of damaged area", indentation);
+            return 0;
+        }
+    }
+    if record.contiguous_damage.len() == 0 {
+        for s in &record.conditions {
+            if *s == Symbol::Damaged {
+                return 0;
+            }
+        }
+        #[cfg(test)]
+        println!("{}> {}", indentation, colorize("ran out with '.' padding", 0, 255, 0));
+        return 1;
+    }
+    match record.conditions.remove(0) {
+        Symbol::Operational => panic!("Operational should be stripped"),
+        Symbol::Damaged => {
+            let damage_len = record.contiguous_damage[0] as usize;
+            if record.conditions.len() < damage_len-1 {
+                #[cfg(test)]
+                println!("{}> not enough conditions", indentation);
+                return 0;
+            }
+            // in this case conditions[0..damage_len-1] have to all be
+            // '#' or '?' (coerced to '#'); AKA none of them can be Operational
+            // the -1 is because we pre-remove the leading '#'
+            for idx in 0..damage_len-1 {
+                if record.conditions[idx] == Symbol::Operational {
+                    #[cfg(test)]
+                    println!("{}> found operational at idx {} in damaged area of length {}, record: {}", indentation, idx, damage_len, record);
+                    return 0;
+                }
+            }
+            // then, conditions[damage_len] has to either a) not exist or b) equal '.' or '?'
+            // and then check children
+            if record.conditions.len() == damage_len-1 {
+                if record.contiguous_damage.len() == 1 {
+                    #[cfg(test)]
+                    println!("{}> {}", indentation, colorize("perfect end length", 0, 255, 0));
+                    return 1;
+                } else {
+                    #[cfg(test)]
+                    println!("{}> not enough space for conditions", indentation);
+                    return 0;
+                }
+            }
+            if record.conditions[damage_len-1] == Symbol::Damaged {
+                #[cfg(test)]
+                println!("{}> damaged at end of desired damage length", indentation);
+                return 0;
+            }
+            let mut child = Record {
+                conditions: record.conditions[damage_len..record.conditions.len()].to_vec(),
+                contiguous_damage: record.contiguous_damage[1..record.contiguous_damage.len()].to_vec()
+            };
+            return child.mut_ok_subvariants(depth+1);
+        },
+        Symbol::Unknown => {
+            let mut rc0: Vec<Symbol> = vec![]; // operational variant, pre-strip
+            let mut rc1: Vec<Symbol> = vec![Symbol::Damaged];
+
+            rc0.extend(record.copy_conditions());
+            rc1.extend(record.copy_conditions());
+
+            #[cfg(test)]
+            println!("{} {}", indentation, colorize(&format!("[ '.{}' ]", Record::variant_to_string(&rc0)), 255, 0, 255));
+            let mut r0 = Record { conditions: rc0, contiguous_damage: record.copy_damage() };
+            let c0 = r0.mut_ok_subvariants(depth+1);
+            #[cfg(test)]
+            println!("{} {}", indentation, colorize(&format!("[ '{}' ]", Record::variant_to_string(&rc1)), 255, 0, 255));
+            let mut r1 = Record { conditions: rc1, contiguous_damage: record.copy_damage() };
+            let c1 = r1.mut_ok_subvariants(depth+1);
+            return c0 + c1;
+        },
+    };
 }
 
 #[test]
