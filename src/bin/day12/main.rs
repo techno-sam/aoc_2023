@@ -6,9 +6,12 @@ fn main() {
     let contents = fs::read_to_string("src/bin/day12/input.txt").expect("Failed to read input");
     debugging();
 
-    let records = contents.trim().split("\n").map(|s| Record::parse(s));
-    let sum: usize = records.map(|r| r.arrangements()).sum();
+    let records: Vec<Record> = contents.trim().split("\n").map(|s| Record::parse(s)).collect();
+    let sum: usize = records.iter().map(|r| r.arrangements()).sum();
     println!("Total arrangement count: {}", sum);
+
+    let sum2: usize = records.iter().map(|r| r.expand().arrangements()).sum();
+    println!("Total expanded arrangement count: {}", sum2);
 }
 
 fn debugging() {
@@ -175,4 +178,5 @@ fn arrangement_count() {
     assert_eq!(1, Record::parse("?#?#?#?#?#?#?#? 1,3,1,6").arrangements());
     assert_eq!(4, Record::parse("????.######..#####. 1,6,5").arrangements());
     assert_eq!(10, Record::parse("?###???????? 3,2,1").arrangements());
+    assert_eq!(506250, Record::parse("?###???????? 3,2,1").expand().arrangements());
 }
