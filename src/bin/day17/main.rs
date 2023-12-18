@@ -6,10 +6,14 @@ fn main() {
     println!("AOC 2023 Day 17");
 
     let contents = fs::read_to_string("src/bin/day17/input.txt").expect("Failed to read input");
-    let map = Map::parse(&contents);
+    let map = Map::parse(&contents, false);
 
     let best = map.best_distance();
     println!("Part 1: {}", best);
+
+    let map2 = Map::parse(&contents, true);
+    let best2 = map2.best_distance();
+    println!("Part 2: {}", best2);
 }
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone)]
@@ -65,7 +69,7 @@ impl Node {
     fn maybe_adjacent(&self, map: &Map, direction: Direction) -> Option<(Self, usize)> {
         if self.travelling_direction == direction { // forward
 
-            if self.straight_dist >= 3 {
+            if (map.part_1() && self.straight_dist >= 3) || (map.part_2 && self.straight_dist >= 10) {
                 return None;
             }
 
@@ -84,6 +88,11 @@ impl Node {
                     }, map.heat_loss[nr as usize][nc as usize] as usize));
         } else if self.travelling_direction.right_turn() == direction
             || self.travelling_direction.left_turn() == direction { // right or left
+
+            // must move at least 4 blocks before turning an Ultra Crucible
+            if map.part_2 && (self.straight_dist != 0 && self.straight_dist < 4) {
+                return None;
+            }
 
             let (nr, nc) = direction + (self.row, self.column);
             if nr < 0 || nc < 0 || nr >= map.height as i16 || nc >= map.width as i16 { // bounds check
@@ -119,10 +128,11 @@ struct Map {
     /// indexed [row][column]
     heat_loss: Vec<Vec<u8>>,
     width: u8,
-    height: u8
+    height: u8,
+    part_2: bool
 }
 impl Map {
-    fn parse(data: &str) -> Map {
+    fn parse(data: &str, part_2: bool) -> Map {
         let lines: Vec<&str> = data.trim().split("\n").collect();
         let width = lines[0].len() as u8;
         let height = lines.len() as u8;
@@ -133,16 +143,35 @@ impl Map {
                 .collect()
             )
             .collect();
-        return Map { heat_loss, width, height };
+        return Map { heat_loss, width, height, part_2 };
+    }
+
+    #[inline(always)]
+    fn part_1(&self) -> bool {
+        return !self.part_2;
     }
 
     fn best_distance(self) -> usize {
         let target_row = self.height - 1;
         let target_column = self.width - 1;
         let initial = Node { row: 0, column: 0, travelling_direction: Direction::East, straight_dist: 0};
-        let d = DijkstraData::dijkstra(initial, self);
+        let part_1 = self.part_1();
+        /*
+        fn hlt(node: &Node) -> bool {
+            if node.row == target_row && node.column == target_column && (part_1 || node.straight_dist >= 4) {
+                return true;
+            }
+            return false;
+        }*/
+        let hlt = |node: &Node| {
+            return node.row == target_row && node.column == target_column && (part_1 || node.straight_dist >= 4);
+        };
+        let d = DijkstraData::dijkstra(initial, self, hlt);
         let best = *d.best_distance.iter()
-            .filter(|(n, _)| n.row == target_row && n.column == target_column)
+            .filter(|(n, _)| n.row == target_row
+                        && n.column == target_column
+                        // for part 2, the crucible must go at least 4 on each leg
+                        && (part_1 || n.straight_dist >= 4))
             .map(|(_, d)| d)
             .min().expect("Pathfinding failed");
         return best;
@@ -165,6 +194,35 @@ fn correct_distance() {
 1224686865563
 2546548887735
 4322674655533
-");
+", false);
     assert_eq!(102, map.best_distance());
+}
+
+#[test]
+fn correct_distance_2() {
+    let map = Map::parse("
+2413432311323
+3215453535623
+3255245654254
+3446585845452
+4546657867536
+1438598798454
+4457876987766
+3637877979653
+4654967986887
+4564679986453
+1224686865563
+2546548887735
+4322674655533
+", true);
+    assert_eq!(94, map.best_distance());
+
+    let map = Map::parse("
+111111111111
+999999999991
+999999999991
+999999999991
+999999999991
+", true);
+    assert_eq!(71, map.best_distance());
 }

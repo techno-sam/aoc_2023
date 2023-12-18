@@ -58,7 +58,7 @@ impl <Node, T>DijkstraData<Node, T> where Node: DijkstraNode<T> {
     }
 
 
-    pub fn dijkstra(initial: Node, context: T) -> DijkstraData<Node, T> {
+    pub fn dijkstra(initial: Node, context: T, should_halt: impl Fn(&Node) -> bool) -> DijkstraData<Node, T> {
         let mut data = DijkstraData::new(initial, context);
         let context = &data.context;
         for (other, distance) in initial.get_connected(context) {
@@ -82,6 +82,9 @@ impl <Node, T>DijkstraData<Node, T> where Node: DijkstraNode<T> {
             }
             data.unvisited.remove(&cur);
             data.visited.insert(cur);
+            if should_halt(&cur) {
+                return data;
+            }
         }
 
         return data;
@@ -113,8 +116,12 @@ mod tests {
 
     #[test]
     fn dijkstra_search() {
-        let a = DijkstraData::dijkstra(T::A, ());
-        assert_eq!(Some(&8_usize), a.best_distance.get(&T::E));
-        assert_eq!(Some(&12_usize), a.best_distance.get(&T::C));
+        fn hlt(node: &T) -> bool { *node == T::E }
+        let a = DijkstraData::dijkstra(T::A, (), hlt);
+        assert_eq!(Some(&8_usize), a.best_distance.get(&T::E), "Early halt");
+
+        fn never(_: &T) -> bool { false }
+        let a = DijkstraData::dijkstra(T::A, (), never);
+        assert_eq!(Some(&12_usize), a.best_distance.get(&T::C), "Halt-less");
     }
 }
