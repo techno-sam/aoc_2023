@@ -11,17 +11,17 @@ pub fn highlight(input: &str, actually: bool, r: u8, g: u8, b: u8) -> String {
     return "\x1b[48;2;".to_owned()+&r.to_string()+";"+&g.to_string()+";"+&b.to_string()+"m"+input+"\x1b[0m";
 }
 
-pub trait DijkstraNode {
+pub trait DijkstraNode where Self: PartialEq + Eq + Hash + Copy {
     /// Returns a vector of (node, distance) pairs
     fn get_connected(&self) -> Vec<(Self, usize)> where Self: Sized;
 }
 
-pub struct DijkstraData<Node> where Node: PartialEq + Eq + Hash + Copy + DijkstraNode {
+pub struct DijkstraData<Node> where Node: DijkstraNode {
     unvisited: HashSet<Node>,
     visited: HashSet<Node>,
     best_distance: HashMap<Node, usize>
 }
-impl <Node>DijkstraData<Node> where Node: PartialEq + Eq + Hash + Copy + DijkstraNode {
+impl <Node>DijkstraData<Node> where Node: DijkstraNode {
     /// note: does NOT add initial to frontier (unvisited nodes)
     fn new(initial: Node) -> DijkstraData<Node> {
         let unvisited = HashSet::new();
@@ -83,5 +83,36 @@ impl <Node>DijkstraData<Node> where Node: PartialEq + Eq + Hash + Copy + Dijkstr
         }
 
         return data;
+    }
+}
+
+#[cfg(test)]
+#[allow(dead_code, unused_imports)]
+mod tests {
+    use super::*;
+    use char_enum_impl::data_enum;
+
+    // graph from https://www.youtube.com/watch?v=bZkzH5x0SKU
+    #[derive(PartialEq, Eq, Hash, Clone, Copy)]
+    #[data_enum(Vec<(T, usize)>)]
+    enum T {
+        A = vec![(T::B, 2), (T::D, 8)],
+        B = vec![(T::A, 2), (T::D, 5), (T::E, 6)],
+        C = vec![(T::E, 9), (T::F, 3)],
+        D = vec![(T::A, 8), (T::B, 5), (T::E, 3), (T::F, 2)],
+        E = vec![(T::B, 6), (T::C, 9), (T::D, 2), (T::F, 1)],
+        F = vec![(T::C, 3), (T::D, 2), (T::E, 1)]
+    }
+    impl DijkstraNode for T {
+        fn get_connected(&self) -> Vec<(Self, usize)> where Self: Sized {
+            return self.value();
+        }
+    }
+
+    #[test]
+    fn dijkstra_search() {
+        let a = DijkstraData::dijkstra(T::A);
+        assert_eq!(Some(&8_usize), a.best_distance.get(&T::E));
+        assert_eq!(Some(&12_usize), a.best_distance.get(&T::C));
     }
 }
