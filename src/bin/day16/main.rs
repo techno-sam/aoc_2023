@@ -44,6 +44,40 @@ fn main() {
     // subtract out padding
     let width = field.width - 2;
     let height = field.height - 2;
+
+    let mut max = 0;
+
+    println!("Iterating through {} starting locations", (width*2) + (height*2));
+
+    // top going down and bottom going up
+    for column in 0..width {
+        let mut field = Field::parse(&contents, 0, column, BeamDirection::South);
+        while !field.step() {}
+        field.cleanup_outer();
+        max = max.max(field.count());
+
+        let mut field = Field::parse(&contents, height-1, column, BeamDirection::North);
+        while !field.step() {}
+        field.cleanup_outer();
+        max = max.max(field.count());
+    }
+
+    println!("Done with top and bottom entry");
+
+    // left going east and right going west
+    for row in 0..height {
+        let mut field = Field::parse(&contents, row, 0, BeamDirection::East);
+        while !field.step() {}
+        field.cleanup_outer();
+        max = max.max(field.count());
+
+        let mut field = Field::parse(&contents, row, width-1, BeamDirection::West);
+        while !field.step() {}
+        field.cleanup_outer();
+        max = max.max(field.count());
+    }
+
+    println!("\n\nPart 2 final count: {}", max);
 }
 
 #[test]
