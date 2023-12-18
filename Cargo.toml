@@ -7,3 +7,8 @@ edition = "2021"
 [dependencies]
 arr_macro = "0.2.1"
 memoize = "0.4.1"
+char_enum_impl = {version="0.1.0", path="char_enum_impl"}
+utils = {version="0.1.0", path="utils"}
+
+[workspace]
+members = ["char_enum_impl", "utils"]

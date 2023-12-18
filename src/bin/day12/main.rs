@@ -1,3 +1,5 @@
+#![allow(unused_mut)]
+
 use std::{fs, fmt::{Display, Error, Formatter}, hash::{Hash, Hasher}, io::{Write, stdout}};
 
 use memoize::memoize;
