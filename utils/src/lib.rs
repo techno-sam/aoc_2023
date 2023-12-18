@@ -11,19 +11,20 @@ pub fn highlight(input: &str, actually: bool, r: u8, g: u8, b: u8) -> String {
     return "\x1b[48;2;".to_owned()+&r.to_string()+";"+&g.to_string()+";"+&b.to_string()+"m"+input+"\x1b[0m";
 }
 
-pub trait DijkstraNode where Self: PartialEq + Eq + Hash + Copy {
+pub trait DijkstraNode<T> where Self: PartialEq + Eq + Hash + Copy {
     /// Returns a vector of (node, distance) pairs
-    fn get_connected(&self) -> Vec<(Self, usize)> where Self: Sized;
+    fn get_connected(&self, context: &T) -> Vec<(Self, usize)> where Self: Sized;
 }
 
-pub struct DijkstraData<Node> where Node: DijkstraNode {
+pub struct DijkstraData<Node, T> where Node: DijkstraNode<T> {
     unvisited: HashSet<Node>,
     visited: HashSet<Node>,
-    best_distance: HashMap<Node, usize>
+    pub best_distance: HashMap<Node, usize>,
+    context: T
 }
-impl <Node>DijkstraData<Node> where Node: DijkstraNode {
+impl <Node, T>DijkstraData<Node, T> where Node: DijkstraNode<T> {
     /// note: does NOT add initial to frontier (unvisited nodes)
-    fn new(initial: Node) -> DijkstraData<Node> {
+    fn new(initial: Node, context: T) -> DijkstraData<Node, T> {
         let unvisited = HashSet::new();
         let visited = {
             let mut visited = HashSet::new();
@@ -35,7 +36,7 @@ impl <Node>DijkstraData<Node> where Node: DijkstraNode {
             best_distance.insert(initial, 0);
             best_distance
         };
-        return DijkstraData { unvisited, visited, best_distance };
+        return DijkstraData { unvisited, visited, best_distance, context };
     }
 
     fn get_best_unvisited(&self) -> Option<Node> {
@@ -57,16 +58,17 @@ impl <Node>DijkstraData<Node> where Node: DijkstraNode {
     }
 
 
-    pub fn dijkstra(initial: Node) -> DijkstraData<Node> {
-        let mut data = DijkstraData::new(initial);
-        for (other, distance) in initial.get_connected() {
+    pub fn dijkstra(initial: Node, context: T) -> DijkstraData<Node, T> {
+        let mut data = DijkstraData::new(initial, context);
+        let context = &data.context;
+        for (other, distance) in initial.get_connected(context) {
             data.best_distance.insert(other, distance);
             data.unvisited.insert(other);
         }
 
         while let Some(cur) = data.get_best_unvisited() {
             let dist_so_far = *data.best_distance.get(&cur).unwrap();
-            for (other, dist) in cur.get_connected() {
+            for (other, dist) in cur.get_connected(context) {
                 if data.visited.contains(&other) {
                     continue;
                 }
@@ -103,15 +105,15 @@ mod tests {
         E = vec![(T::B, 6), (T::C, 9), (T::D, 2), (T::F, 1)],
         F = vec![(T::C, 3), (T::D, 2), (T::E, 1)]
     }
-    impl DijkstraNode for T {
-        fn get_connected(&self) -> Vec<(Self, usize)> where Self: Sized {
+    impl DijkstraNode<()> for T {
+        fn get_connected(&self, _: &()) -> Vec<(Self, usize)> where Self: Sized {
             return self.value();
         }
     }
 
     #[test]
     fn dijkstra_search() {
-        let a = DijkstraData::dijkstra(T::A);
+        let a = DijkstraData::dijkstra(T::A, ());
         assert_eq!(Some(&8_usize), a.best_distance.get(&T::E));
         assert_eq!(Some(&12_usize), a.best_distance.get(&T::C));
     }
