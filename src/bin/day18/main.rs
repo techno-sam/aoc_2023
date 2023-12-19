@@ -1,4 +1,4 @@
-use std::{fs, collections::HashSet};
+use std::fs;
 
 use char_enum_impl::char_enum;
 
@@ -11,98 +11,78 @@ fn main() {
     } else {
         contents = example();
     }
-    let data: Vec<(Moves, u8, &str)> = contents.trim().split("\n")
+    //Vec<(Moves, u8)> 
+    let data: Vec<(Moves, usize)> = contents.trim().split("\n")
         .map(|line| line
             .strip_suffix(")").unwrap()
-            .split_once(" (").unwrap()
-        ).map(|(mov, color)| (mov.split_once(" ").unwrap(), color))
-        .map(|((mov, dist), color)|
-            (
-                Moves::decode(mov.chars().last().unwrap()),
-                dist.parse::<u8>().unwrap(),
-                color
-            )
-        )
+            .split_once(" (#").unwrap()
+        ).map(|(_, color)| color.to_owned())
+        .map(|color| (color[0..5].to_owned(), color.chars().nth(5).unwrap()))
+        .map(|(enc_dist, dir)| (Moves::decode(dir), usize::from_str_radix(&enc_dist, 16).unwrap()))
         .collect();
 
-    let mut field: HashSet<(isize, isize)> = HashSet::new();
-
-    let (mut x, mut y) = (0, 0);
-    field.insert((x, y));
-
-    let mut min_x = 0;
-    let mut max_x = 0;
-
-    let mut min_y = 0;
-    let mut max_y = 0;
-
-    for (mov, dist, _) in data {
-        for _ in 0..dist {
-            (x, y) = mov.offset(x, y);
-            field.insert((x, y));
-
-            min_x = min_x.min(x);
-            max_x = max_x.max(x);
-
-            min_y = min_y.min(y);
-            max_y = max_y.max(y);
-        }
-    }
-
-    let mut interior: Option<(isize, isize)> = None;
-    // calculate internal location
-    'Outer: for y in min_y..=max_y {
-        let mut last = false;
-        for x in min_x..=max_x {
-            let this = field.contains(&(x, y));
-            if this && last { // don't want to handle double-row things
-                continue 'Outer;
-            } else if last { // we *were* one the border, now inside
-                interior = Some((x, y));
-                break 'Outer;
-            }
-            last = this;
-        }
-    }
-
-    if let Some((ix, iy)) = interior {
-        println!("({}, {}) is an interior point", ix, iy);
-        // floodfill outwards
-        let mut frontier: HashSet<(isize, isize)> = HashSet::new();
-        frontier.insert((ix, iy));
-
-        while frontier.len() > 0 {
-            // Steps:
-            // 1. Mark current as 'inside'
-            // 2. Add adjacent points not already in the set as members
-            let (x, y) = *frontier.iter().last().unwrap();
-            frontier.remove(&(x, y));
-            field.insert((x, y));
-            for ox in -1..=1 {
-                for oy in -1..=1 {
-                    if ox == 0 && oy == 0 {
-                        continue;
-                    }
-
-                    let adjacent = (ox+x, oy+y);
-                    if !field.contains(&adjacent) && !frontier.contains(&adjacent) {
-                        frontier.insert(adjacent);
-                    }
-                }
-            }
-        }
-
-        println!("Size: {}", field.len());
-    } else {
-        println!("Couldn't find interior point");
-    }
-
     /*
-    // print out field
-    let printable = field.iter().map(|line| String::from_iter(line));
-    for line in printable {
-        println!("{}", line);
-    }*/
+     * Algorithm, thanks to the lovely people on r/adventofcode
+     * (No way do I know about Pick's theorem and the shoelace formula)
+     *
+     * specifically helpful posts/comments:
+     * u/Boojum: https://www.reddit.com/r/adventofcode/comments/18l2tap/comment/kdv5bzi/
+     * u/SEGV_AGAIN: https://www.reddit.com/r/adventofcode/comments/18l8mao/2023_day_18_intuition_for_why_spoiler_alone/
+     *
+     * total_area = inner_area + (perimeter/2) + 1
+     *
+     * this works b/c Pick's theorem calculates the area of a shape with edges *centered* in the
+     * perimeter trenches
+     *
+     * this results in perimeter trenches having the following extra 'outside' area
+     * 1/2 in edge pieces, as such:
+     * X|#
+     *
+     * X|#
+     *
+     * 3/4 in convex corners, as such:
+     * X X
+     *  +-
+     * X|#
+     *
+     * 1/4 in concave corners, as such
+     * X|#
+     * -+
+     * # #
+     *
+     * convave and convex corners balance out, resulting in an average 1/2 contribution from each
+     * and there are 4 convex corners (see a rectangle), so that adds another 1 (2 units of area
+     * are already included in the perimeter/2 calculation)
+     */
+    
+    /*
+     * Shoelace (triangle variant)
+     * for every edge from (x1, y1) to (x2, y2)
+     * add (x1*y2 - x2*y1)/2 to the total
+     */
+
+    let mut sum: isize = 0; // due to some fun little shoelace-shenannigans, this could (probably)
+                            // become negative at some point in time
+                            // NOTE: to avoid floating point misery, divide TOTAL_AREA in half at the very end
+                            // formula becomes: (sum + perimeter + 2) / 2
+    let mut perimeter: usize = 0;
+
+    // calculate all the edges
+    let (mut x1, mut y1) = (0, 0);
+    for (dir, dist) in data {
+        perimeter += dist;
+
+        let (x2, y2) = dir.offset(x1, y1, dist as isize);
+        sum += x1*y2 - x2*y1;
+
+        // prepare for next iter
+        x1 = x2;
+        y1 = y2;
+    }
+
+    let sum = sum as usize;
+    let total = (sum + perimeter + 2) / 2;
+    println!("Total area: {}", total);
 }
 
 fn example() -> String {
@@ -126,18 +106,18 @@ U 2 (#7a21e3)
 
 #[char_enum]
 enum Moves {
-    Up = 'U',
-    Down = 'D',
-    Left = 'L',
-    Right = 'R'
+    Up = '3',
+    Down = '1',
+    Left = '2',
+    Right = '0'
 }
 impl Moves {
-    fn offset(&self, x: isize, y: isize) -> (isize, isize) {
+    fn offset(&self, x: isize, y: isize, dist: isize) -> (isize, isize) {
         match self {
-            Moves::Up => (x, y-1),
-            Moves::Down => (x, y+1),
-            Moves::Left => (x-1, y),
-            Moves::Right => (x+1, y)
+            Moves::Up => (x, y-dist),
+            Moves::Down => (x, y+dist),
+            Moves::Left => (x-dist, y),
+            Moves::Right => (x+dist, y)
         }
     }
 }
