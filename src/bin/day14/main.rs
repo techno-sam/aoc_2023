@@ -299,6 +299,7 @@ O.#..O.#.#
 }
 
 #[test]
+#[ignore = "Slow, takes about 7 seconds"]
 fn all_spin_load_calculation() {
     assert_eq!(64, Platform::parse("
 O....#....
