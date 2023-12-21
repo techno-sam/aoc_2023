@@ -8,9 +8,15 @@ fn main() {
     let contents = fs::read_to_string("src/bin/day20/input.txt").expect("Failed to read input");
 
     let mut layout = Layout::load(&contents);
+    let mut layout2 = layout.clone();
     let part1 = layout.thousand_product();
 
     println!("Part 1: {}", part1);
+
+    for i in 1..=1_000_000_usize {
+        println!("Starting iteration {}", i);
+        layout2.thousand_product();
+    }
 }
 
 #[derive(Clone)]
@@ -66,16 +72,22 @@ struct Layout {
 impl Layout {
     fn load(data: &str) -> Layout {
         let mut modules: HashMap<String, (Module, Vec<String>)> = HashMap::new();
+        let mut output_found = false;
 
         let lines = data.trim().split("\n")
             .map(|l| {
                 let (src, dst) = l.split_once(" -> ").unwrap();
                 let (src_name, src_module) = Module::parse(src);
                 let dst: Vec<String> = dst.split(", ").map(|s| s.to_owned()).collect();
+                if dst.contains(&"output".to_owned()) {
+                    output_found = true;
+                }
                 return (src_name, (src_module, dst));
             });
         lines.for_each(|(k, v)| {modules.insert(k, v);});
-        modules.insert("output".to_owned(), (Module::parse("output").1, vec![]));
+        if output_found {
+            modules.insert("output".to_owned(), (Module::parse("output").1, vec![]));
+        }
 
         let mut conjunctions: HashSet<String> = HashSet::new();
         for (name, (module, _)) in &modules {
@@ -122,11 +134,15 @@ impl Layout {
                 continue;
             }
 
+            if current == "rx" && !pulse.value() {
+                panic!("Low pulse to rx!");
+            }
+
             let (module, next_targets) = self.modules.get_mut(&current).expect(&format!("Module '{}' not found", current));
-            //for next_target in next_targets.clone() {
-            //    println!("Pulse {} {:?} -> {}", current, pulse, next_target);
-            //}
+
+            #[cfg(test)]
             println!("{} {:?} -> {}", src, pulse, current);
+
             match module {
                 Module::FlipFlop(state) => {
                     if let Pulse::High = pulse {
