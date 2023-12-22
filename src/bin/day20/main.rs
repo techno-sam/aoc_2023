@@ -178,11 +178,11 @@ impl Layout {
 
     /// return: (output_signals, low_pulses, high_pulses)
     fn press_once(&mut self) -> (Vec<bool>, usize, usize) {
-        let hash = self.hash_me();
+        /*let hash = self.hash_me();
         if self.previous_hashes.contains(&hash) {
             panic!("Cycle detected!!!");
         }
-        self.previous_hashes.insert(hash);
+        self.previous_hashes.insert(hash);*/
 
         // Push to back, pop from front
         let mut pulses: VecDeque<(String, String, Pulse)> = VecDeque::new();
