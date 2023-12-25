@@ -94,6 +94,7 @@ impl Into<Pulse> for bool {
 struct Layout {
     modules: HashMap<String, (Module, Vec<String>)>,
     all_stateful_modules: Vec<String>,
+    #[allow(dead_code)]
     previous_hashes: HashSet<u64>,
     iters: usize,
     intervals: [(Option<usize>, Option<usize>); 4]
@@ -111,6 +112,7 @@ impl Layout {
         }
     }
 
+    #[allow(dead_code)]
     fn hash_me(&self) -> u64 {
         let mut hasher = DefaultHasher::new();
         for module in &self.all_stateful_modules {

@@ -73,6 +73,7 @@ impl Tile {
         }
     }
 
+    #[allow(dead_code)]
     fn print(&self) {
         let (r, g, b);
         if let Tile::Explored = self {
@@ -171,6 +172,7 @@ impl Field {
         return out;
     }
 
+    #[allow(dead_code)]
     fn print(&self) {
         for row in 0..self.height {
             for column in 0..self.width {
