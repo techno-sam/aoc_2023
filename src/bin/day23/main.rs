@@ -3,10 +3,12 @@ use std::{fs, collections::{HashMap, VecDeque, HashSet}};
 use char_enum_impl::{char_enum, data_enum};
 use utils::{colorize, highlight};
 
+static mut PART2: bool = false;
+
 fn main() {
     println!("AOC 2023 Day 23");
 
-    let real = true;
+    let real = false;
     let contents: String;
     if real {
         contents = fs::read_to_string("src/bin/day23/input.txt").expect("Failed to read input");
@@ -14,15 +16,23 @@ fn main() {
         contents = fs::read_to_string("src/bin/day23/example.txt").expect("Failed to read example");
     }
 
-    let mut field = Field::load(&contents);
-    field.find_intersections();
-    field.print();
+    for part in 1..=2_u8 {
+        unsafe { PART2 = part == 2 };
+        let mut field = Field::load(&contents);
+       field.find_intersections();
+        field.print();
 
-    println!("\n\n\n");
-    let graph: Graph = field.make_graph();
-    graph.print_summary();
-    let max_distance = graph.max_distance();
-    println!("Part 1: {}", max_distance);
+        println!("\n\n\n");
+        let graph: Graph = field.make_graph();
+        graph.print_summary();
+        let max_distance = graph.max_distance();
+        println!("{}", colorize(&format!("\n\nPart {}: {}\n\n", part, max_distance), 255, 255, 0));
+    }
+}
+
+#[inline]
+fn part2() -> bool {
+    return unsafe { PART2 };
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -84,10 +94,10 @@ impl Tile {
             Tile::Path => true,
             Tile::Forest => false,
 
-            Tile::SlopeN => dir == Direction::North,
-            Tile::SlopeE => dir == Direction::East,
-            Tile::SlopeS => dir == Direction::South,
-            Tile::SlopeW => dir == Direction::West
+            Tile::SlopeN => dir == Direction::North || part2(),
+            Tile::SlopeE => dir == Direction::East || part2(),
+            Tile::SlopeS => dir == Direction::South || part2(),
+            Tile::SlopeW => dir == Direction::West || part2()
         }
     }
 }
@@ -409,7 +419,7 @@ impl <'a>Graph {
             if current == self.end_coord {
                 println!("Reached target with {} steps", total_length);
                 return total_length;
-            } else {
+            } else if !part2() {
                 println!("Reached dead end");
             }
         }
