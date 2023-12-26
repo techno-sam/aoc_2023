@@ -1,9 +1,11 @@
-use std::{fs, fmt::{Display, Formatter}};
+use std::{fs, fmt::{Display, Formatter}, ops::{Add, Sub}};
+
+use vec3_rs::Vector3;
 
 fn main() {
     println!("AOC 2023 Day 24");
 
-    let real = true;
+    let real = false;
     let contents: String;
     let bounds: Bounds;
     if real {
@@ -37,6 +39,9 @@ fn main() {
         }
     }
     println!("{} hailstones' future paths cross inside the boundaries (part 1)", sum_ok);
+
+    let sum2 = part2(entries[0], entries[1], entries[2], entries[3]);
+    println!("Part 2: {}", sum2);
 }
 
 trait ApproxEq<T> {
@@ -71,6 +76,12 @@ impl Display for CrossingState {
     }
 }
 
+type Vec3 = Vector3<f64>;
+fn ORIGIN() -> Vec3 {
+    Vec3::new(0.0, 0.0, 0.0)
+}
+
+#[derive(Clone, Copy)]
 struct Entry {
     p_x: f64,
     p_y: f64,
@@ -98,6 +109,23 @@ impl Entry {
         return Entry { p_x, p_y, p_z, v_x, v_y, v_z };
     }
 
+    #[inline]
+    fn p(&self) -> Vec3 {
+        return Vec3::new(self.p_x, self.p_y, self.p_z);
+    }
+
+    #[inline]
+    fn v(&self) -> Vec3 {
+        return Vec3::new(self.v_x, self.v_y, self.v_z);
+    }
+
+    #[inline]
+    fn unit_v(&self) -> Vec3 {
+        let mut v = self.v();
+        v.normalize();
+        return v;
+    }
+
     fn is_future(&self, x: f64) -> bool {
         if self.v_x > 0.0 {
             return x > self.p_x;
@@ -110,10 +138,61 @@ impl Entry {
     fn is_past(&self, x: f64) -> bool {
         !self.is_future(x)
     }
+
+    /// `n` must be the normal of a plane that crosses the origin
+    fn intersection_distance(&self, n: &Vec3) -> f64 {
+        let l = self.unit_v();
+        let l0 = self.p();
+        let over = (ORIGIN() - l0).dot(n);
+        let under = l.dot(n);
+        return over / under;
+    }
+
+    fn along(&self, d: f64) -> Vec3 {
+        return self.p() + (self.unit_v()*d);
+    }
+
+    fn time_to_reach(&self, d: f64) -> f64 {
+        return d / self.v().magnitude();
+    }
+
+    fn pos_at(&self, t: f64) -> Vec3 {
+        return self.p() + (self.v()*t);
+    }
 }
 impl Display for Entry {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}, {}, {} @ {}, {}, {}", self.p_x, self.p_y, self.p_z, self.v_x, self.v_y, self.v_z)
+    }
+}
+impl Add<Entry> for Entry {
+    type Output = Entry;
+
+    fn add(self, rhs: Entry) -> Self::Output {
+        return Entry {
+            p_x: self.p_x + rhs.p_x,
+            p_y: self.p_y + rhs.p_y,
+            p_z: self.p_z + rhs.p_z,
+
+            v_x: self.v_x + rhs.v_x,
+            v_y: self.v_y + rhs.v_y,
+            v_z: self.v_z + rhs.v_z,
+        };
+    }
+}
+impl Sub<Entry> for Entry {
+    type Output = Entry;
+
+    fn sub(self, rhs: Entry) -> Self::Output {
+        return Entry {
+            p_x: self.p_x - rhs.p_x,
+            p_y: self.p_y - rhs.p_y,
+            p_z: self.p_z - rhs.p_z,
+
+            v_x: self.v_x - rhs.v_x,
+            v_y: self.v_y - rhs.v_y,
+            v_z: self.v_z - rhs.v_z,
+        };
     }
 }
 
@@ -169,4 +248,57 @@ fn compute_crossing_state(a: &Entry, b: &Entry, bounds: &Bounds) -> CrossingStat
             return CrossingState::FutureOutside(x, y);
         }
     }
+}
+
+fn part2(a: Entry, b: Entry, c: Entry, d: Entry) -> i64 {
+    println!("\n\nReference: {}\n", a);
+    let b = &(b - a);
+    let c = &(c - a);
+    let d = &(d - a);
+
+    // p1 is the origin
+    let p2 = b.p();
+    //let p3 = c.p();
+    //let p4 = d.p();
+
+    // v1 is stopped
+    let v2 = b.v();
+    //let v3 = c.v();
+    //let v4 = d.v();
+
+    println!("p2: {}, v2: {}", p2, v2);
+
+    // Normal of plane including the origin and the path of b (stone 2)
+    let mut normal = p2.cross(&v2);
+    normal.normalize();
+    let normal = &normal;
+
+    println!("Normal: {}\n", normal);
+
+    let d3 = c.intersection_distance(normal);
+    let d4 = d.intersection_distance(normal);
+
+    let intersect_c: Vec3 = c.along(d3);
+    let intersect_d: Vec3 = d.along(d4);
+
+    let intersect_time_c: f64 = c.time_to_reach(d3);
+    let intersect_time_d: f64 = d.time_to_reach(d4);
+
+    // debugging info
+    println!("Hit hailstone {} at t={}, pos={}", *c+a, intersect_time_c, (*c+a).pos_at(intersect_time_c));
+    println!("Hit hailstone {} at t={}, pos={}", *d+a, intersect_time_d, (*d+a).pos_at(intersect_time_d));
+
+    // delta(dist) / delta(time)
+    let ivel: Vec3 = (intersect_d - intersect_c) / (intersect_time_d - intersect_time_c);
+    println!("\nInitial velocity: {}", ivel + a.v());
+    // to find initial position do following:
+    // (intersect_c - ipos) / (intersect_time_c) = ivel
+    // (intersect_c - ipos) = ivel * intersect_time_c
+    // ipos = intersect_c - (ivel * intersect_time_c)
+    let ipos: Vec3 = intersect_c - (ivel * intersect_time_c);
+    // transform back to global frame of reference
+    let ipos = ipos + a.p();
+    println!("Initial position: {}", ipos);
+    let sum = (ipos.get_x().round() as i64) + (ipos.get_y().round() as i64) + (ipos.get_z().round() as i64);
+    return sum;
 }

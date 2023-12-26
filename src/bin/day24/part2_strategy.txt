@@ -1,0 +1,14 @@
+Use stone 1's frame of reference (so that it is stopped at the origin), such that any crossing the origin at any time works
+
+Then:
+form a plane through the origin and the line of stone 2's path
+- use https://web.ma.utexas.edu/users/m408m/Display12-5-4.shtml
+- using vector A = (p_2 - ORIGIN) aka p_2 and vector B = (v_2) as the 'defining' vectors of the plane,
+    the normal can be found as A x B (cross product)
+
+find the time & place of intersection for stones 3 and 4, constructing a velocity and initial position from these
+- use https://en.wikipedia.org/wiki/Line-plane_intersection
+
+transform said velocity & initial position back to the 'global' frame of reference
+
+profit
