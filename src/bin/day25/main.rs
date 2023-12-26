@@ -1,15 +1,19 @@
-use std::{fs, collections::{HashMap, HashSet}};
+use std::{fs, collections::{HashMap, HashSet}, hash::{Hash, Hasher}, fmt::{Debug, Display}};
+
+use rand::seq::SliceRandom;
+use utils::{DijkstraNode, DijkstraData};
 
 fn main() {
     println!("AOC 2023 Day 25");
 
-    let real = false;
+    let real = true;
     let contents: String;
     if real {
         contents = fs::read_to_string("src/bin/day25/input.txt").expect("Failed to read input");
     } else {
         contents = fs::read_to_string("src/bin/day25/example.txt").expect("Failed to read example");
     }
+
     let mut graph = Graph::new();
     for line in contents.trim().split("\n") {
         let (from, to) = line.split_once(": ").unwrap();
@@ -19,8 +23,61 @@ fn main() {
         }
     }
 
+    let labels: Vec<Label> = graph.nodes.keys().map(|l| *l).collect();
+    let rng = &mut rand::thread_rng();
+    // Find cut-nodes
+    let mut edge_count: HashMap<(Label, Label), usize> = HashMap::new();
+    for _ in 0..1000 {
+        let a = labels.choose(rng).unwrap();
+        let b = labels.choose(rng).unwrap();
+        if a == b {
+            continue;
+        }
+
+        if !real {
+            println!("a: {}, b: {}", to_string(a), to_string(b));
+        }
+
+        let a = DijkstraCompatNode { graph: &graph, lbl: *a };
+        let b = DijkstraCompatNode { graph: &graph, lbl: *b };
+
+        let hlt = |node: &DijkstraCompatNode<'_>| -> bool {
+            return b.lbl == node.lbl;
+        };
+
+        let d = DijkstraData::dijkstra(a, (), hlt);
+        //println!("{}", d.best_distance.get(&b).unwrap());
+        /*for (k, v) in &d.prev_in_chain {
+            println!("{} <- {}", v, k);
+        }*/
+        let mut curr = &b;
+        loop {
+            let prev = match d.prev_in_chain.get(curr) {
+                None => break,
+                Some(v) => v
+            };
+            let first = curr.lbl.min(prev.lbl);
+            let second = curr.lbl.max(prev.lbl);
+
+            edge_count.insert((first, second), 1 + match edge_count.get(&(first, second)) {
+                None => 0,
+                Some(v) => *v
+            });
+
+            curr = prev;
+        }
+        //println!("{}", to_string(&d.prev_in_chain.get(&b).unwrap().lbl));
+        //println!("\n\n\n\n");
+    }
+
+    let mut to_cut: Vec<(&(Label, Label), &usize)> = edge_count.iter().collect();
+    to_cut.sort_unstable_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
+
+    println!("\n\n\n");
+
     let a: usize;
     let b: usize;
+    /*
     // just use GraphViz in 'neato' mode to determine the cuts
     if real {
         graph.cut(to_label("klk"), to_label("xgz"));
@@ -36,7 +93,14 @@ fn main() {
 
         a = graph.count_from(to_label("hfx"));
         b = graph.count_from(to_label("pzl"));
+    }*/
+    for i in 0..3 {
+        let ((from, to), _) = to_cut[i];
+        println!("Should cut: {}, {}", to_string(from), to_string(to));
+        graph.cut(*from, *to);
     }
+    a = graph.count_from(to_cut[0].0.0);
+    b = graph.count_from(to_cut[0].0.1);
 
     println!("A: {}", a);
     println!("B: {}", b);
@@ -68,6 +132,38 @@ fn to_label(data: &str) -> Label {
 
 fn to_string(lbl: &Label) -> String {
     return String::from_iter(lbl.iter());
+}
+
+#[derive(Clone, Copy)]
+struct DijkstraCompatNode<'a> {
+    graph: &'a Graph,
+    lbl: Label
+}
+impl <'a>DijkstraCompatNode<'a> {
+    fn with_label(&self, lbl: Label) -> DijkstraCompatNode<'a> {
+        return DijkstraCompatNode { graph: self.graph, lbl };
+    }
+}
+impl PartialEq for DijkstraCompatNode<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        return self.lbl == other.lbl;
+    }
+}
+impl Eq for DijkstraCompatNode<'_> {}
+impl Hash for DijkstraCompatNode<'_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.lbl.hash(state);
+    }
+}
+impl Display for DijkstraCompatNode<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&to_string(&self.lbl))
+    }
+}
+impl <'a>DijkstraNode<()> for DijkstraCompatNode<'a> {
+    fn get_connected(&self, _: &()) -> Vec<(Self, usize)> where Self: Sized {
+        return self.graph.get(self.lbl).connections.iter().map(|c| (self.with_label(*c), 1_usize)).collect();
+    }
 }
 
 struct Node {

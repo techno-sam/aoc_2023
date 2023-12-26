@@ -20,6 +20,7 @@ pub struct DijkstraData<Node, T> where Node: DijkstraNode<T> {
     unvisited: HashSet<Node>,
     visited: HashSet<Node>,
     pub best_distance: HashMap<Node, usize>,
+    pub prev_in_chain: HashMap<Node, Node>,
     context: T
 }
 impl <Node, T>DijkstraData<Node, T> where Node: DijkstraNode<T> {
@@ -36,7 +37,7 @@ impl <Node, T>DijkstraData<Node, T> where Node: DijkstraNode<T> {
             best_distance.insert(initial, 0);
             best_distance
         };
-        return DijkstraData { unvisited, visited, best_distance, context };
+        return DijkstraData { unvisited, visited, best_distance, prev_in_chain: HashMap::new(), context };
     }
 
     fn get_best_unvisited(&self) -> Option<Node> {
@@ -63,6 +64,7 @@ impl <Node, T>DijkstraData<Node, T> where Node: DijkstraNode<T> {
         let context = &data.context;
         for (other, distance) in initial.get_connected(context) {
             data.best_distance.insert(other, distance);
+            data.prev_in_chain.insert(other, initial);
             data.unvisited.insert(other);
         }
 
@@ -74,10 +76,20 @@ impl <Node, T>DijkstraData<Node, T> where Node: DijkstraNode<T> {
                 }
 
                 data.unvisited.insert(other);
-                let best_dist = match data.best_distance.get(&other) {
-                    None => dist_so_far + dist,
-                    Some(&existing) => existing.min(dist_so_far + dist)
+                let new_dist = dist_so_far + dist;
+                let (better, best_dist) = match data.best_distance.get(&other) {
+                    None => (true, new_dist),
+                    Some(&existing) => {
+                        if new_dist < existing {
+                            (true, new_dist)
+                        } else {
+                            (false, existing)
+                        }
+                    }
                 };
+                if better {
+                    data.prev_in_chain.insert(other, cur);
+                }
                 data.best_distance.insert(other, best_dist);
             }
             data.unvisited.remove(&cur);

@@ -20,6 +20,7 @@ dependencies = [
  "arr_macro",
  "char_enum_impl",
  "memoize",
+ "rand",
  "utils",
  "vec3-rs",
 ]
