@@ -1,0 +1,16 @@
+rsh: frs pzl lsr rzs
+frs: lsr rsh lhk qnr
+rzs: cmg rsh qnr lsr
+xhk: bvb hfx rhn ntq jqt
+ntq: hfx jqt xhk bvb
+hfx: xhk rhn ntq bvb
+lsr: frs pzl rzs rsh lhk
+nvd: cmg qnr pzl lhk
+rhn: hfx bvb xhk jqt
+cmg: qnr rzs nvd lhk
+jqt: xhk rhn ntq
+qnr: cmg nvd frs rzs
+lhk: frs lsr nvd cmg
+pzl: rsh lsr nvd
+bvb: xhk rhn ntq hfx
+
